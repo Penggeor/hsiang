@@ -1,0 +1,27 @@
+.csdn {
+  /* 16:9 */
+  /* width: 960px; */
+  width: 800px;
+  /* height: 540px; */
+  height: 450px;
+  background: none !important;
+}
+
+.juejin {
+  /* 3:2 */
+  width: 900px;
+  height: 600px;
+  background: none !important;
+}
+
+.dev {
+  /* 43:17 */
+  width: 860px;
+  height: 340px;
+}
+
+.hashnode {
+  /* 40:21 */
+  width: 800px;
+  height: 420px;
+}
