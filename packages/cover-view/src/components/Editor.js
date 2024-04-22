@@ -35,6 +35,7 @@ if (cachedDefaultSettings) {
     font: 'font-serif',
     theme: 'background',
     customIcon: '',
+    defaultCustomIcon: '',
     platform: 'hashnode',
   }
 }
@@ -62,6 +63,36 @@ class Editor extends React.Component {
           })),
         })
       })
+
+    if (defaultSettings.icon.value === 'custom') {
+      // get the cached custom icon from IndexedDB
+      let open = indexedDB.open('cover-view', 1)
+      open.onupgradeneeded = () => {
+        let db = open.result
+        let store = db.createObjectStore('customIcon', { keyPath: 'id' })
+        store.createIndex('id', 'id', { unique: true })
+      }
+
+      open.onsuccess = () => {
+        let db = open.result
+        let tx = db.transaction('customIcon', 'readwrite')
+        let store = tx.objectStore('customIcon')
+        let request = store.get(1)
+        request.onsuccess = () => {
+          if (request.result && request.result.buffer) {
+            const defaultCustomIcon = URL.createObjectURL(
+              new Blob([request.result.buffer], { type: request.result.type })
+            )
+            this.setState({
+              customIcon: defaultCustomIcon,
+            })
+          }
+        }
+        tx.oncomplete = () => {
+          db.close()
+        }
+      }
+    }
   }
 
   handleReset = () => {
@@ -80,10 +111,6 @@ class Editor extends React.Component {
     console.log('componentDidUpdate')
     // Handle customIcon especially
     let customIcon = this.state.customIcon
-    if (customIcon) {
-      // customIcon is a blob url
-      // TODO
-    }
 
     localStorage.setItem(STORAGE_KEY, {
       ...this.state,
@@ -186,13 +213,58 @@ class Editor extends React.Component {
                           <input
                             type='file'
                             className='focus:outline-none text-lg cursor-pointer bg-white rounded border'
-                            onChange={(e) =>
+                            // set the defaultCustomIcon
+                            // defaultValue={this.state.defaultCustomIcon}
+                            value={this.state.customIcon.filename}
+                            onChange={(e) => {
+                              console.log('customIcon')
+                              console.log(e.target.files['0'])
+
+                              const file = e.target.files['0']
+                              const blob = new Blob([file], { type: file.type })
+
+                              let reader = new FileReader()
+                              reader.onload = function (e) {
+                                // cache Blob data use IndexedDB
+                                let open = indexedDB.open('cover-view', 1)
+                                open.onupgradeneeded = function () {
+                                  let db = open.result
+                                  let store = db.createObjectStore(
+                                    'customIcon',
+                                    {
+                                      keyPath: 'id',
+                                    }
+                                  )
+                                  store.createIndex('id', 'id', {
+                                    unique: true,
+                                  })
+                                }
+                                open.onsuccess = function () {
+                                  let db = open.result
+                                  let tx = db.transaction(
+                                    'customIcon',
+                                    'readwrite'
+                                  )
+                                  let store = tx.objectStore('customIcon')
+
+                                  store.put({
+                                    id: 1,
+                                    buffer: e.target.result,
+                                    type: file.type,
+                                    filename: file.name,
+                                  })
+
+                                  tx.oncomplete = function () {
+                                    db.close()
+                                  }
+                                }
+                              }
+                              reader.readAsArrayBuffer(blob)
+
                               this.setState({
-                                customIcon: URL.createObjectURL(
-                                  e.target.files[0]
-                                ),
+                                customIcon: URL.createObjectURL(blob),
                               })
-                            }
+                            }}
                           />
                         </div>
                       ) : (
